@@ -1,0 +1,30 @@
+1	is animal
+2	is transportation
+3	is clothes
+4	is plant
+5	is tableware
+6	is device
+7	is black
+8	is white
+9	is blue
+10	is brown
+11	is orange
+12	is red
+13	is green
+14	is yellow
+15	has feathers
+16	has four legs
+17	has two legs
+18	has two arms
+19	is for entertainment
+20	is for business
+21	is for communication
+22	is for family
+23	is for office use
+24	is for personal
+25	is gorgeous
+26	is simple
+27	is elegant
+28	is cute
+29	is pure
+30	is naive
