@@ -3,6 +3,8 @@ import pandas as pd
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 
 
 class ZJLSet(Dataset):
@@ -13,6 +15,8 @@ class ZJLSet(Dataset):
         self.attributes = attributes
         self.word_embeddings = word_embeddings
         self.transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomResizedCrop(64, (0.3, 1)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
@@ -65,11 +69,19 @@ def load_data(dataset_name='DatasetA', attr_norm='l2', word_emb_norm='l2', batch
     val = train_image_list[val_idx]
     test = pd.read_csv(f'{data_root}/DatasetA_test_20180813/DatasetA_test/image.txt', header=None)
 
+    pre_train, pre_val = train_test_split(train)
+
     datasets = {
+        'pre_train': ZJLSet(f'{data_root}/DatasetA_train_20180813/train', pre_train[0].values, pre_train[1].values,
+                            attributes, word_embeddings),
+        'pre_val': ZJLSet(f'{data_root}/DatasetA_train_20180813/train', pre_val[0].values, pre_val[1].values,
+                            attributes, word_embeddings),
         'train': ZJLSet(f'{data_root}/DatasetA_train_20180813/train', train[0].values, train[1].values, attributes,
                         word_embeddings),
         'val': ZJLSet(f'{data_root}/DatasetA_train_20180813/train', val[0].values, val[1].values, attributes,
                       word_embeddings),
+        'all_train': ZJLSet(f'{data_root}/DatasetA_train_20180813/train', train_image_list[0].values,
+                            train_image_list[1].values, attributes, word_embeddings),
         'test': ZJLSet(f'{data_root}/DatasetA_test_20180813/DatasetA_test/test', test[0].values)
     }
 
@@ -80,3 +92,24 @@ def load_data(dataset_name='DatasetA', attr_norm='l2', word_emb_norm='l2', batch
                                   num_workers=8) for ds in datasets}
 
     return dataloaders, attributes, word_embeddings
+
+
+def evalute(model, loader, device, word_embeddings=None):
+    model = model.eval()
+    preds = []
+    labels = []
+    for _, sample in enumerate(loader):
+        image = sample['image'].to(device)
+        label = sample['label'].numpy()
+
+        if word_embeddings is None:
+            pred = model.predict(image)
+        else:
+            pred = model.predict(image, word_embeddings)
+
+        preds += [pred]
+        labels += [label]
+
+    preds = np.concatenate(preds, 0)
+    labels = np.concatenate(labels, 0)
+    return accuracy_score(labels, preds)
