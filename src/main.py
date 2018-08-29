@@ -1,34 +1,45 @@
-from src.utils import load_data, evalute
-from src.DeViSE import SimpleCNN, DeViSE
+from src.utils import load_data, evalute, save_result, train
+from src.DeViSE import DeViSE
+from src.densenet import DenseNet
 import torch
-import copy
 
 
-def pre_train_cnn(cnn, device, loaders, n_ep=500):
-    model = cnn().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-3)
-    max_acc = 0
-    for i_ep in range(n_ep):
-        model = model.train()
-        for _, sample in enumerate(loaders['pre_train']):
-            image = sample['image'].to(device)
-            label = sample['label'].to(device)
+def pre_train_cnn(cnn, device, loaders, n_ep=200, val=False, wd=1e-4, save_model_path=None):
+    print('Training CNN...')
 
-            optimizer.zero_grad()
-            loss = model.get_loss(image, label)
-            loss.backward()
-            optimizer.step()
+    model = cnn(num_classes=230)
 
-        train_acc = evalute(model, loaders['pre_train'], device)
-        val_acc = evalute(model, loaders['pre_val'], device)
-        print(f'Ep_{i_ep} - train: {train_acc:.4%} | val: {val_acc:.4%}')
+    if val:
+        tr_loader = loaders['pre_train']
+        va_loader = loaders['pre_val']
+    else:
+        # tr_loader = loaders['all_train']
+        tr_loader = loaders['train']
+        va_loader = None
 
-        if val_acc > max_acc:
-            max_acc = val_acc
-            best_model_wts = copy.deepcopy(model.state_dict())
+    model = train(model, device, tr_loader, n_ep, wd, va_loader=va_loader)
 
-    print(f'Best - val: {max_acc:.4%}')
-    model.load_state_dict(best_model_wts)
+    if save_model_path is not None:
+        torch.save(model.state_dict(), save_model_path)
+
+    return model
+
+
+def train_DeViSE(cnn, device, loaders, word_embeddings, n_ep=100, wd=1e-4, val=False):
+    print('Training DeViSE...')
+
+    model = DeViSE(cnn)
+    word_embeddings = torch.from_numpy(word_embeddings).to(device)
+
+    if val:
+        tr_loader = loaders['train']
+        va_loader = loaders['val']
+    else:
+        tr_loader = loaders['all_train']
+        va_loader = None
+
+    model = train(model, device, tr_loader, n_ep, wd, word_embeddings, va_loader=va_loader)
+
     return model
 
 
@@ -36,25 +47,6 @@ if __name__ == '__main__':
     DEVICE = torch.device('cuda:2')
     loaders, attributes, word_embeddings = load_data()
 
-    cnn = pre_train_cnn(SimpleCNN, DEVICE, loaders)
-    #
-    # cnn = SimpleCNN().to(DEVICE)
-    # model = cnn
-    # # model = DeViSE().to(DEVICE)
-    # optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-3)
-    # word_embeddings = torch.from_numpy(word_embeddings).to(DEVICE)
-    #
-    # for i in range(100):
-    #     model = model.train()
-    #     for _, sample in enumerate(loaders['pre_train']):
-    #         image = sample['image'].to(DEVICE)
-    #         label = sample['label'].to(DEVICE)
-    #
-    #         optimizer.zero_grad()
-    #         loss = model.get_loss(image, label, word_embeddings)
-    #         loss.backward()
-    #         optimizer.step()
-    #
-    #     train_acc = evalute(model, word_embeddings, loaders['pre_train'], DEVICE)
-    #     val_acc = evalute(model, word_embeddings, loaders['pre_val'], DEVICE)
-    #     print(f'Ep_{i} - train: {train_acc:.4%} | val: {val_acc:.4%}')
+    cnn = pre_train_cnn(DenseNet, DEVICE, loaders, n_ep=200, save_model_path='../output/densenet.pkl')
+    devise = train_DeViSE(cnn, DEVICE, loaders, word_embeddings, n_ep=100, val=True)
+    save_result(devise, DEVICE, loaders['test'], word_embeddings, '../output/result.txt')
