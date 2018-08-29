@@ -6,7 +6,6 @@ import torchvision.transforms as transforms
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 import torch
-import torch.nn.functional as F
 from tqdm import tqdm
 import copy
 
@@ -20,15 +19,6 @@ class ZJLSet(Dataset):
         self.word_embeddings = word_embeddings
         self.label_code = label_code
         self.transform = transform
-
-
-        # transforms.Compose([
-        #     transforms.RandomHorizontalFlip(),
-        #     transforms.RandomResizedCrop(64, (0.3, 1)),
-        #     transforms.ToTensor(),
-        #     transforms.Normalize(mean=[0.485, 0.456, 0.406],
-        #                          std=[0.229, 0.224, 0.225])
-        # ])
 
     def __len__(self):
         return len(self.images)

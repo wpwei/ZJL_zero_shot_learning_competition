@@ -1,3 +1,8 @@
+# This code is copied from [gpleiss/efficient_densenet_pytorch] with slightly modifications.
+# https://github.com/gpleiss/efficient_densenet_pytorch/blob/master/models/densenet.py
+
+# ========== Start of the original code ========================================
+
 # This implementation is based on the DenseNet-BC implementation in torchvision
 # https://github.com/pytorch/vision/blob/master/torchvision/models/densenet.py
 
