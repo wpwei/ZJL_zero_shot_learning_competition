@@ -160,11 +160,11 @@ class DenseNet(nn.Module):
         logits = self.classifier(out)
         return out, logits
 
-    def get_loss(self, x, label):
+    def get_loss(self, x, label, *args):
         _, logits = self.forward(x)
         return F.cross_entropy(logits, label)
 
-    def predict(self, x):
+    def predict(self, x, *args):
         with torch.no_grad():
             _, logits = self.forward(x)
             pred = logits.max(1)[1]
