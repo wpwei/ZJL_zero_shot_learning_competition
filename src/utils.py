@@ -109,29 +109,32 @@ def load_data(dataset_name='DatasetA', attr_norm='l2', word_emb_norm='l2', batch
 
 
 def evalute(model, loader, device, word_embeddings=None):
-    model = model.eval()
-    preds = []
-    labels = []
-    for _, sample in enumerate(loader):
-        image = sample['image'].to(device)
-        label = sample['label'].numpy()
+    with torch.no_grad():
+        model = model.eval()
+        preds = []
+        labels = []
+        losses = []
+        for _, sample in enumerate(loader):
+            image = sample['image'].to(device)
+            label = sample['label'].to(device)
 
-        if word_embeddings is None:
-            pred = model.predict(image)
-        else:
             pred = model.predict(image, word_embeddings)
+            loss = model.get_loss(image, label, word_embeddings)
 
-        preds += [pred]
-        labels += [label]
+            losses += [loss.detach().cpu().numpy().reshape(-1)]
+            preds += [pred]
+            labels += [label.detach().cpu().numpy()]
 
-    preds = np.concatenate(preds, 0)
-    labels = np.concatenate(labels, 0)
-    return accuracy_score(labels, preds)
+        preds = np.concatenate(preds, 0)
+        labels = np.concatenate(labels, 0)
+        losses = np.concatenate(losses, 0)
+
+    return accuracy_score(labels, preds), losses.mean()
 
 
-def train(model, device, tr_loader, n_ep, wd, *args, va_loader=None):
+def train(model, device, tr_loader, n_ep, wd, lr,  *args, va_loader=None, grad_norm_clip=None):
     model = model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), weight_decay=wd)
+    optimizer = torch.optim.Adam(model.parameters(), weight_decay=wd, lr=lr)
 
     if va_loader is not None:
         max_acc = 0
@@ -145,12 +148,14 @@ def train(model, device, tr_loader, n_ep, wd, *args, va_loader=None):
             optimizer.zero_grad()
             loss = model.get_loss(image, label, *args)
             loss.backward()
+            if grad_norm_clip is not None:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), grad_norm_clip)
             optimizer.step()
 
         if va_loader is not None:
-            train_acc = evalute(model, va_loader, device, *args)
-            val_acc = evalute(model, va_loader, device, *args)
-            print(f'Ep_{i_ep} - train: {train_acc:.4%} | val: {val_acc:.4%}')
+            train_acc, train_loss = evalute(model, tr_loader, device, *args)
+            val_acc, val_loss = evalute(model, va_loader, device, *args)
+            print(f'Ep_{i_ep} - train: {train_acc:.4%} (loss: {train_loss:.4f}) | val: {val_acc:.4%} (loss: {val_loss:.4f})')
 
             if val_acc > max_acc:
                 max_acc = val_acc

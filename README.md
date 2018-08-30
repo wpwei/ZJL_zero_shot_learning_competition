@@ -1,18 +1,20 @@
-# ZhejiangLab Cup 2018 - Zero Shot Learning - Baseline
+# ZhejiangLab Cup 2018 - Zero Shot Learning - Naive Baseline
 
 [2018之江杯全球人工智能大赛 - 零样本图像目标识别](
 https://tianchi.aliyun.com/competition/introduction.htm?spm=5176.100066.0.0.6ba733afAph1aQ&raceId=231677) 简易baseline
 
-## 性能
+## 精度
 |   Local   | Leaderboard |
 |-----------|-------------|
-|   4.7%    |     TBD     |
+|   1.8%    |     TBD     |
 
-## 目的
+是的，低的惨不忍睹。没有~~炼丹~~优化参数，有兴趣的同学可以试试，炼出好结果记得告诉我一下。
+
+## 这么没用的东西也好意思拿出来？
 
 * 给后来的同学一个start point
-* 天池的比赛很少有Kaggle那样的分享氛围，自己在Kaggle上学了很多，希望天池也能设置鼓励分享的激励机制，让比赛热闹起来。
-* **求交流求讨论求组队**（国外没人玩天池啊。。。orz。。。）
+* 抛砖引玉。天池的比赛很少有Kaggle那样的分享氛围，自己在Kaggle的讨论上学到了很多，希望天池也能设置鼓励分享的激励机制，让比赛热闹起来。
+* **求交流求讨论求组队**（在国外找不到人组队。。。orz。。。）
 
 ## Requirements
 
@@ -42,13 +44,13 @@ https://tianchi.aliyun.com/competition/introduction.htm?spm=5176.100066.0.0.6ba7
 
 ### 采用模型
 
-简单起见，本baseline采用了Google的DeViSE[1]。
+简单起见，本baseline采用了DEM[1]。
 
 首先在训练集上学习DenseNet分类器。
 
-训练时，通过DenseNet[2]提取图像特征后，与Label的word embedding同时投影到1024维的语义空间，取内积后计算hinge rank loss训练。算法具体请参照[1]。
+训练时，先通过DenseNet[2]提取图像特征后，然后把Label的word embedding投影到图像特征空间，优化MSE loss来训练。算法具体请参照[1]。
 
-预测时，计算待预测图片和**全部230分类**的word embedding的语义空间投影的内积，取最大分类。
+预测时，计算 _待预测图片的特征_ 和 _**全部230分类**的word embedding在图像特征空间上投影_ 的欧式距离，取最近分类。
 
 ### 数据划分
 
@@ -68,10 +70,8 @@ https://tianchi.aliyun.com/competition/introduction.htm?spm=5176.100066.0.0.6ba7
 * [ ] 线上性能测试
 
 ## References
-[1] [DeViSE: A Deep Visual-Semantic Embedding Model](https://static.googleusercontent.com/media/research.google.com/zh-CN//pubs/archive/41473.pdf)
+[1] [Learning a Deep Embedding Model for Zero-Shot Learning](http://openaccess.thecvf.com/content_cvpr_2017/papers/Zhang_Learning_a_Deep_CVPR_2017_paper.pdf)
 
 [2] [Densely Connected Convolutional Networks](https://arxiv.org/abs/1608.06993)
 
 [3] [Zero-Shot Learning - A Comprehensive Evaluation of the Good, the Bad and the Ugly](https://arxiv.org/abs/1707.00600)
-
-    
